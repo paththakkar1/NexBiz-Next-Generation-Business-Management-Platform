@@ -2,7 +2,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-const db = require('../config/db');
+const User = require('../models/User');
+const Role = require('../models/Role');
 const { sendSuccess, sendError } = require('../utils/response');
 require('dotenv').config();
 
@@ -27,28 +28,33 @@ const register = async (req, res) => {
 
   try {
     // 1. Check if email already exists
-    const [existingUsers] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
-    if (existingUsers.length > 0) {
+    const userExists = await User.findOne({ email: email.toLowerCase() });
+    if (userExists) {
       return sendError(res, 'A user with this email address already exists.', 400);
     }
 
-    // 2. Fetch the role ID from database matching the userRole
-    const [roleRow] = await db.query('SELECT id FROM roles WHERE name = ?', [userRole]);
-    if (roleRow.length === 0) {
+    // 2. Fetch the role from database matching userRole
+    const roleRecord = await Role.findOne({ name: userRole.toUpperCase() });
+    if (!roleRecord) {
       return sendError(res, `Specified role '${userRole}' does not exist in the system.`, 400);
     }
-    const roleId = roleRow[0].id;
 
     // 3. Generate verification token and hash the password
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // 4. Create user record
-    await db.query(
-      `INSERT INTO users (full_name, email, password_hash, role, role_id, verification_token, is_verified) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [full_name, email, passwordHash, userRole, roleId, verificationToken, false]
-    );
+    // 4. Create user document
+    const newUser = new User({
+      full_name,
+      email,
+      password_hash: passwordHash,
+      role: userRole.toUpperCase(),
+      role_ref: roleRecord._id,
+      verification_token: verificationToken,
+      is_verified: false
+    });
+
+    await newUser.save();
 
     console.log(`[USER REGISTERED] User: ${email}, Verification Token: ${verificationToken}`);
 
@@ -56,7 +62,7 @@ const register = async (req, res) => {
     return sendSuccess(
       res, 
       'User registered successfully. Please verify your email.', 
-      { email, role: userRole, verificationToken }, 
+      { email: newUser.email, role: newUser.role, verificationToken }, 
       201
     );
   } catch (error) {
@@ -74,11 +80,10 @@ const login = async (req, res) => {
 
   try {
     // 1. Fetch user by email
-    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
-    if (users.length === 0) {
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
       return sendError(res, 'Invalid email or password credentials.', 401);
     }
-    const user = users[0];
 
     // 2. Verify password match
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
@@ -88,7 +93,7 @@ const login = async (req, res) => {
 
     // 3. Sign JWT token (expires in 24 hours)
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_me_in_production',
       { expiresIn: '24h' }
     );
@@ -97,7 +102,7 @@ const login = async (req, res) => {
     return sendSuccess(res, 'User authenticated successfully', {
       token,
       user: {
-        id: user.id,
+        id: user._id,
         full_name: user.full_name,
         email: user.email,
         role: user.role,
@@ -119,28 +124,23 @@ const forgotPassword = async (req, res) => {
 
   try {
     // 1. Find user by email
-    const [users] = await db.query('SELECT id, email FROM users WHERE email = ?', [email]);
-    if (users.length === 0) {
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
       // To prevent user enumeration, return a general success message
       return sendSuccess(res, 'If that email address exists in our system, a password reset link has been sent.', null);
     }
-    const user = users[0];
 
     // 2. Generate secure random reset token and expiration (1 hour)
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const expires = new Date();
-    expires.setHours(expires.getHours() + 1); // 1-hour validity
+    user.reset_token = resetToken;
+    user.reset_token_expires = Date.now() + 3600000; // 1-hour validity
 
-    // 3. Save token to user profile
-    await db.query(
-      'UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
-      [resetToken, expires, user.id]
-    );
+    await user.save();
 
     const resetUrl = `http://localhost:3000/reset-password?token=${resetToken}`;
     console.log(`[PASSWORD RESET REQUESTED] User: ${user.email}, Link: ${resetUrl}`);
 
-    // 4. Configure & send reset email
+    // 3. Configure & send reset email
     const mailOptions = {
       from: process.env.EMAIL_FROM || '"NexBiz Support" <support@nexbiz.com>',
       to: user.email,
@@ -179,24 +179,24 @@ const resetPassword = async (req, res) => {
 
   try {
     // 1. Fetch user matching active, valid, unexpired token
-    const [users] = await db.query(
-      'SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > ?',
-      [token, new Date()]
-    );
+    const user = await User.findOne({
+      reset_token: token,
+      reset_token_expires: { $gt: Date.now() }
+    });
 
-    if (users.length === 0) {
+    if (!user) {
       return sendError(res, 'The password reset token is invalid or has expired.', 400);
     }
-    const user = users[0];
 
     // 2. Hash the new password
     const newPasswordHash = await bcrypt.hash(password, 10);
 
     // 3. Update password and clear reset tokens
-    await db.query(
-      'UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
-      [newPasswordHash, user.id]
-    );
+    user.password_hash = newPasswordHash;
+    user.reset_token = null;
+    user.reset_token_expires = null;
+    
+    await user.save();
 
     return sendSuccess(res, 'Your password has been successfully reset. You can now login.', null);
   } catch (error) {
@@ -213,16 +213,12 @@ const getProfile = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const [users] = await db.query(
-      'SELECT id, full_name, email, role, is_verified, created_at, updated_at FROM users WHERE id = ?',
-      [userId]
-    );
-
-    if (users.length === 0) {
+    const user = await User.findById(userId).select('-password_hash');
+    if (!user) {
       return sendError(res, 'User profile could not be found.', 404);
     }
 
-    return sendSuccess(res, 'User profile retrieved successfully', users[0]);
+    return sendSuccess(res, 'User profile retrieved successfully', user);
   } catch (error) {
     console.error('Get Profile Error:', error);
     return sendError(res, 'An error occurred while retrieving the profile.', 500);
@@ -238,46 +234,31 @@ const updateProfile = async (req, res) => {
   const userId = req.user.userId;
 
   try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return sendError(res, 'User profile could not be found.', 404);
+    }
+
     // 1. If email is being changed, ensure it's not already taken
-    if (email && email !== req.user.email) {
-      const [existingUsers] = await db.query('SELECT id FROM users WHERE email = ? AND id != ?', [email, userId]);
-      if (existingUsers.length > 0) {
+    if (email && email.toLowerCase() !== user.email) {
+      const emailExists = await User.findOne({ email: email.toLowerCase() });
+      if (emailExists) {
         return sendError(res, 'This email address is already in use by another user.', 400);
       }
+      user.email = email.toLowerCase();
     }
 
-    // 2. Perform database update
-    const updateFields = [];
-    const queryParams = [];
-
+    // 2. Update optional fields
     if (full_name) {
-      updateFields.push('full_name = ?');
-      queryParams.push(full_name);
+      user.full_name = full_name;
     }
 
-    if (email) {
-      updateFields.push('email = ?');
-      queryParams.push(email);
-    }
-
-    if (updateFields.length === 0) {
-      return sendError(res, 'No changes were provided to update.', 400);
-    }
-
-    queryParams.push(userId);
-
-    await db.query(
-      `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
-      queryParams
-    );
+    await user.save();
 
     // 3. Fetch and return updated profile
-    const [updatedUsers] = await db.query(
-      'SELECT id, full_name, email, role, is_verified, created_at, updated_at FROM users WHERE id = ?',
-      [userId]
-    );
+    const updatedUser = await User.findById(userId).select('-password_hash');
 
-    return sendSuccess(res, 'User profile updated successfully', updatedUsers[0]);
+    return sendSuccess(res, 'User profile updated successfully', updatedUser);
   } catch (error) {
     console.error('Update Profile Error:', error);
     return sendError(res, 'An error occurred while updating the profile.', 500);

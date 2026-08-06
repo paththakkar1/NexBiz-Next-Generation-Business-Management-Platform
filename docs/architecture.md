@@ -1,6 +1,6 @@
-# System Architecture & Database Design - NexBiz
+# System Architecture & Database Design (MongoDB Edition) - NexBiz
 
-This document covers the high-level architecture, repository structure, database ER diagram, and testing payloads for the NexBiz platform.
+This document covers the high-level architecture, directory layout, MongoDB collection schemas, and testing payloads for the NexBiz platform.
 
 ---
 
@@ -14,13 +14,17 @@ NexBiz-Next-Generation-Business-Management-Platform/
 │   └── (Vite boilerplate)
 ├── server/                      # Node.js/Express REST API
 │   ├── config/
-│   │   ├── db.js                # mysql2/promise connection pool
-│   │   └── schema.sql           # Database schema & seeds
+│   │   ├── db.js                # Mongoose connection client
+│   │   └── seed.js              # Idempotent DB seed script
 │   ├── controllers/
-│   │   └── authController.js    # Auth & Profile controllers
+│   │   └── authController.js    # Mongoose-based controllers
 │   ├── middleware/
 │   │   ├── auth.js              # JWT & RBAC middlewares
 │   │   └── validator.js         # Input validation schemas
+│   ├── models/                  # Mongoose Schemas & Models
+│   │   ├── Permission.js        # Permission Schema
+│   │   ├── Role.js              # Role Schema
+│   │   └── User.js              # User Schema
 │   ├── routes/
 │   │   └── auth.js              # Mounts /api/auth routes
 │   ├── utils/
@@ -35,47 +39,51 @@ NexBiz-Next-Generation-Business-Management-Platform/
 
 ---
 
-## 2. Database Entity Relationship Diagram (ERD)
+## 2. MongoDB Database Design & Collections
+The data model uses Mongoose schemas to map documents to MongoDB collections.
 
-```mermaid
-erDiagram
-    users {
-        int id PK
-        varchar full_name
-        varchar email UK
-        varchar password_hash
-        enum role "ADMIN, EMPLOYEE, CUSTOMER"
-        int role_id FK
-        boolean is_verified
-        varchar verification_token
-        varchar reset_token
-        datetime reset_token_expires
-        timestamp created_at
-        timestamp updated_at
-    }
+### 2.1 Users Collection (`users`)
+Stores registered accounts with references to roles.
+```json
+{
+  "_id": "ObjectId",
+  "full_name": "String",
+  "email": "String (Unique, Indexed, Lowercase)",
+  "password_hash": "String",
+  "role": "String ('ADMIN' | 'EMPLOYEE' | 'CUSTOMER')",
+  "role_ref": "ObjectId (Ref: Role)",
+  "is_verified": "Boolean",
+  "verification_token": "String",
+  "reset_token": "String",
+  "reset_token_expires": "Date",
+  "createdAt": "Date",
+  "updatedAt": "Date"
+}
+```
 
-    roles {
-        int id PK
-        varchar name UK
-        varchar description
-        timestamp created_at
-    }
+### 2.2 Roles Collection (`roles`)
+Stores system roles and mapping of granted permission ObjectIds.
+```json
+{
+  "_id": "ObjectId",
+  "name": "String (Unique, Uppercase)",
+  "description": "String",
+  "permissions": ["ObjectId (Ref: Permission)"],
+  "createdAt": "Date",
+  "updatedAt": "Date"
+}
+```
 
-    permissions {
-        int id PK
-        varchar name UK
-        varchar description
-        timestamp created_at
-    }
-
-    role_permissions {
-        int role_id PK, FK
-        int permission_id PK, FK
-    }
-
-    roles ||--o{ users : "has"
-    roles ||--o{ role_permissions : "contains"
-    permissions ||--o{ role_permissions : "maps"
+### 2.3 Permissions Collection (`permissions`)
+Stores standard action scopes (e.g. read own profile, manage users).
+```json
+{
+  "_id": "ObjectId",
+  "name": "String (Unique)",
+  "description": "String",
+  "createdAt": "Date",
+  "updatedAt": "Date"
+}
 ```
 
 ---
@@ -136,7 +144,7 @@ erDiagram
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "user": {
-      "id": 1,
+      "id": "64d0bc88f34279ab8de01001",
       "full_name": "Jane Doe",
       "email": "jane@example.com",
       "role": "CUSTOMER",
@@ -190,13 +198,13 @@ erDiagram
   "success": true,
   "message": "User profile retrieved successfully",
   "data": {
-    "id": 1,
+    "_id": "64d0bc88f34279ab8de01001",
     "full_name": "Jane Doe",
     "email": "jane@example.com",
     "role": "CUSTOMER",
     "is_verified": false,
-    "created_at": "2026-08-06T09:00:00.000Z",
-    "updated_at": "2026-08-06T09:00:00.000Z"
+    "createdAt": "2026-08-06T09:00:00.000Z",
+    "updatedAt": "2026-08-06T09:00:00.000Z"
   }
 }
 ```
@@ -216,13 +224,13 @@ erDiagram
   "success": true,
   "message": "User profile updated successfully",
   "data": {
-    "id": 1,
+    "_id": "64d0bc88f34279ab8de01001",
     "full_name": "Jane Doe Modified",
     "email": "jane@example.com",
     "role": "CUSTOMER",
     "is_verified": false,
-    "created_at": "2026-08-06T09:00:00.000Z",
-    "updated_at": "2026-08-06T09:10:00.000Z"
+    "createdAt": "2026-08-06T09:00:00.000Z",
+    "updatedAt": "2026-08-06T09:10:00.000Z"
   }
 }
 ```

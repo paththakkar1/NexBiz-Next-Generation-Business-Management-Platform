@@ -2,8 +2,12 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-// Initialize DB pool connection
+// Initialize Mongoose connection
 require('./config/db');
+
+// Run database seed script
+const seedDB = require('./config/seed');
+seedDB();
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -16,7 +20,7 @@ const PORT = process.env.PORT || 5000;
 
 // Enable CORS
 app.use(cors({
-  origin: '*', // Customize this for production
+  origin: '*', // Customize for production
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
