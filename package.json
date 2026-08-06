@@ -1,0 +1,37 @@
+{
+  "name": "nexbiz-next-generation-business-management-platform",
+  "version": "1.0.0",
+  "description": "NexBiz is an enterprise-grade, monorepo-structured Business Management Platform designed to streamline customer relationship management (CRM), inventory tracking, invoicing, and analytics.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paththakkar1/NexBiz-Next-Generation-Business-Management-Platform.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/paththakkar1/NexBiz-Next-Generation-Business-Management-Platform/issues"
+  },
+  "homepage": "https://github.com/paththakkar1/NexBiz-Next-Generation-Business-Management-Platform#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.23.2"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "nodemon": "^3.1.14"
+  }
+}
