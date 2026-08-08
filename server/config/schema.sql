@@ -1,4 +1,0 @@
--- DEPRECATED: NexBiz database has migrated to MongoDB using Mongoose.
--- Schema definitions are now defined in Mongoose models under /server/models/
--- To seed default database roles and permissions, run the server which performs auto-seeding, or execute:
--- npm run seed
