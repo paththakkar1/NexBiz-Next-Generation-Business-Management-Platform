@@ -1,125 +1,70 @@
-# 🚀 NexBiz - Next-Generation Business Management Platform
+# 🚀 NexBiz – Next-Generation Business Management Platform
 
-NexBiz is a comprehensive, production-grade Business Management SaaS platform engineered specifically for the Indian enterprise & SMB market context. It combines CRM, Invoicing (GST-compliant), Inventory Management, and HR directory operations into a unified monorepo system.
-
----
-
-## 🏗️ Tech Stack & Architecture
-
-- **Monorepo Structure**: Concurrent client-server architecture managed via root `package.json`.
-- **Frontend Client (`/client`)**: React 18 + Vite + Tailwind CSS + Lucide React + React Router DOM.
-- **Backend API (`/server`)**: Node.js + Express.js + CORS + Helmet + Morgan logging + Dotenv.
-- **Database**: MySQL 8.0+ using `mysql2/promise` connection pool with foreign key integrity, index optimization, and audit timestamps.
+NexBiz is a full-stack, cloud-based SaaS business management platform engineered specifically for the Indian enterprise & SMB market context. It unifies Executive Analytics, CRM Kanban Pipelines, Invoicing with 18% GST and Razorpay Online Payments, Inventory Monitoring, and HR Payroll processing into a single monorepo architecture.
 
 ---
 
-## 📂 Repository Layout
+## 🌟 Core Platform Modules & Features
 
-```text
-NexBiz-Next-Generation-Business-Management-Platform/
-├── client/                      # Frontend Application (React + Vite + Tailwind)
-│   ├── src/
-│   │   ├── components/          # Header, Dashboard, Module Cards
-│   │   ├── App.jsx              # Main Application Container
-│   │   ├── main.jsx             # React DOM Entry
-│   │   └── index.css            # Tailwind & Glassmorphism Design System
-│   ├── index.html               # Web HTML Shell
-│   ├── vite.config.js           # Vite Server & API Proxy Rules
-│   ├── tailwind.config.js       # Custom SaaS Theme Configuration
-│   └── package.json             # Frontend Dependencies
-│
-├── server/                      # Backend API Server (Node + Express)
-│   ├── config/
-│   │   ├── db.js                # MySQL2 Connection Pool Utility
-│   │   └── schema.sql           # Production Database DDL Script (7 Tables)
-│   ├── index.js                 # Express Application Entry Point
-│   ├── .env.example             # Server Environment Template
-│   └── package.json             # Backend Dependencies
-│
-├── .env.example                 # Root Environment Variables Template
-├── .gitignore                   # Version Control Rules
-├── package.json                 # Monorepo Root Script Runner (Concurrently)
-└── README.md                    # Project Documentation
-```
+### 1. 📊 Centralized Executive Dashboard
+- **Real-Time Operational Widgets**: Total revenue collected, active leads count, low-stock threshold warnings, and pending payroll expenses.
+- **Visual Analytics (Recharts)**: Interactive YTD revenue vs target performance line graph, sales pipeline stage bar breakdown, and product category distribution.
+- **AI Smart Business Insights**: Data-driven recommendation engine suggesting real-time operational advice (e.g. stock intake recommendations, high-value lead follow-ups, overdue payment notices).
+
+### 2. 👥 Customer Relationship Management (CRM)
+- **Interactive Kanban Pipeline**: Drag/click deal stage progression (`Lead` ➔ `Contacted` ➔ `Qualified` ➔ `Won` ➔ `Lost`).
+- **Pipeline Value Aggregates**: Real-time total pipeline revenue calculations per stage column.
+- **Client Accounts Directory**: Directory table storing contact persons, phones, emails, status, and lead acquisition sources.
+
+### 3. 🧾 Invoicing & Razorpay Payment Integration
+- **GST Invoice Generator**: Itemized line items builder with automatic 18% GST calculation, discounts, and custom payment terms.
+- **1-Click PDF Export & Download**: Instant printable/exportable tax invoices powered by client-side PDF rendering.
+- **Razorpay Payment Gateway**: Integrated online checkout workflow launching Razorpay Payment SDK for direct online payments.
+- **Automated Ledger**: Automatically updates invoice statuses (`Paid`/`Sent`/`Overdue`) and records transaction logs upon payment verification.
+
+### 4. 📦 Inventory Management Module
+- **Stock Monitoring**: Real-time SKU tracking with category pricing and safety threshold indicators (`Optimal` vs `Low Stock Alert`).
+- **Movement Logs**: Historical record tracking incoming shipments (`IN`), sales dispatches (`OUT`), and audit adjustments (`ADJUSTMENT`).
+
+### 5. 💼 Employee Management & Payroll System
+- **Employee Directory**: Centralized roster recording employee codes, departments, designations, base salaries, and bank account/IFSC details.
+- **Automated Payroll Runner**: Process monthly batch disbursements calculating bonuses, PF/tax deductions, and net salary.
+- **Digital Salary Slips**: 1-click printable PDF payslips for employees.
 
 ---
 
-## 🗄️ Database Schema & DDL (`server/config/schema.sql`)
+## 🛠️ Tech Stack & System Architecture
 
-The MySQL database schema contains 7 tables designed for foreign key integrity, cascade options, indexing, and auditing:
-
-1. **`roles`**: System RBAC permissions (`Admin`, `Employee`, `Customer`).
-2. **`users`**: User login accounts (`email` indexed, `password_hash`, `role_id` FK).
-3. **`customers`**: Customer profiles (`status` & `company_name` indexed, `user_id` FK).
-4. **`leads`**: CRM pipeline opportunities (`status` & `follow_up_date` indexed, `customer_id` FK with `ON DELETE CASCADE`).
-5. **`products`**: Inventory items (`sku` indexed UNIQUE, low stock threshold triggers).
-6. **`invoices`**: Billing transactions (`invoice_number` UNIQUE, `customer_id` FK, `gst_amount` calculation support).
-7. **`employees`**: HR records (`user_id` UNIQUE FK, `department` indexed).
-
-### Running Database Migrations:
-```bash
-# 1. Access MySQL CLI or MySQL Workbench
-mysql -u root -p
-
-# 2. Execute the DDL schema script
-source /path/to/server/config/schema.sql;
-```
+- **Frontend Client (`/client`)**: React 18 + Vite + Tailwind CSS + Lucide Icons + Recharts + Razorpay SDK + html2pdf.js.
+- **Backend API (`/server`)**: Node.js + Express.js + CORS + Helmet + Morgan + MySQL2 connection pool.
+- **Database (`server/config/schema.sql`)**: Production-grade MySQL DDL schema with 11 relational tables (`roles`, `users`, `customers`, `leads`, `products`, `stock_movements`, `invoices`, `invoice_items`, `transactions_ledger`, `employees`, `payroll_runs`) featuring foreign key constraints and indexed search fields.
 
 ---
 
-## ⚙️ Environment Variables Setup
+## ⚡ Quick Start Guide
 
-Create a `.env` file in the `/server` directory (or copy from `.env.example`):
-
-```env
-# Server Port & Environment
-PORT=5000
-NODE_ENV=development
-
-# MySQL Connection Details
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=nexbiz_db
-DB_PORT=3306
-
-# Security & CORS
-CORS_ORIGIN=http://localhost:5173
-JWT_SECRET=nexbiz_super_secret_jwt_key_2026
-```
-
----
-
-## ⚡ Installation & Getting Started
-
-### 1. Install Dependencies Across Monorepo
-From the repository root directory, run:
+### 1. Install Monorepo Dependencies
+From the repository root directory:
 ```bash
 npm run install:all
 ```
 
-### 2. Running in Development Mode
-Launch both backend Express server and frontend Vite server concurrently:
+### 2. Initialize MySQL Database
+Make sure your local MySQL service is running on port `3306`. Update `DB_PASSWORD` in `server/.env` if needed, then run:
+```bash
+npm run init-db
+```
+*(Alternative manual CLI import: `cmd /c "mysql -u root -p < server/config/schema.sql"`)*
+
+### 3. Launch Development Environment
 ```bash
 npm run dev
 ```
 - **Frontend App**: [http://localhost:5173](http://localhost:5173)
-- **Backend API**: [http://localhost:5000/api](http://localhost:5000/api)
-- **Health Endpoint**: [http://localhost:5000/api/health](http://localhost:5000/api/health)
-
-### 3. Individual Component Execution
-- **Run Server Only**: `npm run dev:server`
-- **Run Client Only**: `npm run dev:client`
-
----
-
-## 🛡️ Key Features & Architectural Highlights
-
-- **Security Hardening**: Express configured with `helmet` HTTP header protections, CORS origin restrictions, and error isolation.
-- **Connection Resilience**: `mysql2/promise` connection pool featuring connection validation on server startup.
-- **Modern Design System**: Dynamic dark theme with custom glassmorphism panels, responsive grid cards, typography hierarchy (Outfit & Inter fonts), and real-time backend connection status indicators.
+- **Backend API Server**: [http://localhost:5000/api](http://localhost:5000/api)
+- **API Health Check**: [http://localhost:5000/api/health](http://localhost:5000/api/health)
 
 ---
 
 ## 📜 License
-ISC License © NexBiz Engineering Team.
+ISC License © 2026 NexBiz Engineering Team. Built for High-Growth SaaS Enterprises.
