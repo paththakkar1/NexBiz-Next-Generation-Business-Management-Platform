@@ -8,12 +8,29 @@ import {
   Sun, 
   Moon, 
   CheckCircle2, 
-  AlertTriangle 
+  AlertTriangle,
+  UserCheck,
+  ChevronDown
 } from 'lucide-react';
 
 export default function Header({ apiStatus, onOpenQuickAction }) {
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
+
+  const [currentRole, setCurrentRole] = useState({
+    name: 'Rajesh Sharma',
+    role: 'Admin CEO',
+    initials: 'RS',
+    badge: 'Super Admin',
+    badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+  });
+
+  const availableRoles = [
+    { name: 'Rajesh Sharma', role: 'Admin CEO', initials: 'RS', badge: 'Super Admin', badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    { name: 'Priya Patel', role: 'Sales Executive', initials: 'PP', badge: 'CRM Staff', badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+    { name: 'Sneha Rao', role: 'Finance Lead', initials: 'SR', badge: 'Accounts Manager', badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20' }
+  ];
 
   const notifications = [
     { id: 1, title: 'Invoice #INV-2026-001 Paid', time: '10m ago', type: 'success', text: '₹1,13,000 received via Razorpay UPI.' },
@@ -56,7 +73,7 @@ export default function Header({ apiStatus, onOpenQuickAction }) {
           {/* Notifications Button with Badge */}
           <div className="relative">
             <button
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={() => { setShowNotifications(!showNotifications); setShowRoleSwitcher(false); }}
               className="p-2 text-slate-400 hover:text-slate-200 bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-800 transition relative"
             >
               <Bell className="w-4 h-4" />
@@ -93,17 +110,49 @@ export default function Header({ apiStatus, onOpenQuickAction }) {
             </span>
           </div>
 
-          {/* User Profile Stub */}
-          <div className="flex items-center gap-2.5 pl-2 border-l border-slate-800">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-semibold text-xs">
-              RS
-            </div>
-            <div className="hidden xl:block text-left">
-              <p className="text-xs font-semibold text-slate-200 leading-tight">Rajesh Sharma</p>
-              <p className="text-[10px] text-emerald-400 flex items-center gap-1 font-medium">
-                <ShieldCheck className="w-3 h-3 inline text-emerald-400" /> Admin CEO
-              </p>
-            </div>
+          {/* User Profile & Role Switcher Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => { setShowRoleSwitcher(!showRoleSwitcher); setShowNotifications(false); }}
+              className="flex items-center gap-2 pl-2 border-l border-slate-800 hover:opacity-80 transition text-left"
+            >
+              <div className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-semibold text-xs">
+                {currentRole.initials}
+              </div>
+              <div className="hidden xl:block">
+                <p className="text-xs font-semibold text-slate-200 leading-tight flex items-center gap-1">
+                  {currentRole.name} <ChevronDown className="w-3 h-3 text-slate-400" />
+                </p>
+                <p className="text-[10px] text-emerald-400 flex items-center gap-1 font-medium">
+                  <ShieldCheck className="w-3 h-3 inline text-emerald-400" /> {currentRole.role}
+                </p>
+              </div>
+            </button>
+
+            {showRoleSwitcher && (
+              <div className="absolute right-0 mt-2 w-64 rounded-2xl glass-panel border border-slate-800 shadow-2xl p-3 space-y-2 z-50">
+                <div className="border-b border-slate-800 pb-2">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Switch RBAC User Session</p>
+                </div>
+                {availableRoles.map((r) => (
+                  <button
+                    key={r.name}
+                    onClick={() => { setCurrentRole(r); setShowRoleSwitcher(false); }}
+                    className={`w-full p-2 rounded-xl text-left text-xs transition flex items-center justify-between ${
+                      currentRole.name === r.name ? 'bg-indigo-600/20 border border-indigo-500/30 text-indigo-200' : 'hover:bg-slate-900 text-slate-300'
+                    }`}
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-100">{r.name}</p>
+                      <p className="text-[10px] text-slate-400">{r.role}</p>
+                    </div>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${r.badgeColor}`}>
+                      {r.badge}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
